@@ -509,6 +509,64 @@ export function useFamilyTree() {
 		});
 	}
 
+	function addRelatedPerson(params: {
+		baseId: UUID;
+		relation: "parent" | "child" | "partner";
+		display: string;
+		parentChildKind?: "biological" | "adoptive" | "step" | "unknown";
+		coupleStatus?: "married" | "divorced" | "partner" | "unknown";
+	}) {
+		if (!data) return;
+		const display = params.display.trim();
+		if (!display) return setError("名前（display）は必須です。");
+		if (!data.people[params.baseId])
+			return setError("基準人物が存在しません。");
+
+		const p = makePerson(display);
+
+		const people = { ...data.people, [p.id]: p };
+		const relationships = { ...data.relationships };
+
+		if (params.relation === "child") {
+			const rel = makeParentChild(
+				params.baseId,
+				p.id,
+				params.parentChildKind ?? "biological",
+			);
+			relationships[rel.id] = rel;
+		} else if (params.relation === "parent") {
+			const rel = makeParentChild(
+				p.id,
+				params.baseId,
+				params.parentChildKind ?? "biological",
+			);
+			// 循環チェック（親子追加時と同じ）
+			if (
+				wouldCreateParentChildCycle(
+					{ ...data, people, relationships },
+					(rel as any).parent,
+					(rel as any).child,
+				)
+			) {
+				return setError("この追加は循環を作ります。");
+			}
+			relationships[rel.id] = rel;
+		} else {
+			const rel = makeCouple(params.baseId, p.id);
+			// statusを反映したければ rel.status を変更
+			(rel as any).status = params.coupleStatus ?? "unknown";
+			relationships[rel.id] = rel;
+		}
+
+		setData({
+			...data,
+			meta: { ...data.meta, updatedAt: nowIso() },
+			people,
+			relationships,
+		});
+		setSelectedPersonId(p.id); // 追加した人を選択しておくと気持ちいい
+	}
+
 	return {
 		// state
 		data,
@@ -570,5 +628,7 @@ export function useFamilyTree() {
 		downDepth,
 		setDownDepth,
 		subgraph,
+
+		addRelatedPerson,
 	};
 }

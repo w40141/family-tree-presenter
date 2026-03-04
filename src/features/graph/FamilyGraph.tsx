@@ -225,6 +225,16 @@ export function FamilyGraph({ data, subgraph, selectedId, onSelect }: Props) {
 							<text x={p.x + 10} y={p.y + 40} fontSize={10} opacity={0.6}>
 								{id.slice(0, 8)}
 							</text>
+							<rect
+								x={p.x + nodeW - 18}
+								y={p.y + 4}
+								width={14}
+								height={14}
+								rx={3}
+							/>
+							<text x={p.x + nodeW - 14} y={p.y + 15} fontSize={12}>
+								+
+							</text>
 						</g>
 					);
 				})}
